@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { io } from 'socket.io-client';
-import { useAuthStore } from './authStore';
+import { create } from "zustand";
+import { io } from "socket.io-client";
+import { useAuthStore } from "./authStore";
 
 export const useSocketStore = create((set, get) => ({
   socket: null,
@@ -11,27 +11,26 @@ export const useSocketStore = create((set, get) => ({
     const { token } = useAuthStore.getState();
 
     if (!token) {
-      console.error('No token available for socket connection');
+      console.error("No token available for socket connection");
       return;
     }
 
-    const socket = io('http://localhost:5000', {
-      auth: {
-        token
-      }
+    const socket = io("https://dotchat-py90.onrender.com", {
+      auth: { token },
+      transports: ["websocket", "polling"],
     });
 
-    socket.on('connect', () => {
-      console.log('Socket connected');
+    socket.on("connect", () => {
+      console.log("Socket connected");
       set({ isConnected: true });
     });
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
       set({ isConnected: false });
     });
 
-    socket.on('onlineUsers', (userIds) => {
+    socket.on("onlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
 
@@ -48,5 +47,5 @@ export const useSocketStore = create((set, get) => ({
 
   setOnlineUsers: (userIds) => {
     set({ onlineUsers: userIds });
-  }
+  },
 }));

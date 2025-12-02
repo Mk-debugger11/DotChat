@@ -1,6 +1,6 @@
 import { useAuthStore } from '../stores/authStore';
 
-const BASE_URL = '/api';
+const BASE_URL = 'https://dotchat-py90.onrender.com/api';
 
 const apiRequest = async (method, endpoint, bodyData) => {
   const { token } = useAuthStore.getState();
