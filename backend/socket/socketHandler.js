@@ -3,7 +3,13 @@ import prisma from '../config/database.js';
 
 const onlineUsers = new Map();
 
+// Store Socket.IO instance so controllers can emit events
+let ioInstance = null;
+
+export const getIO = () => ioInstance;
+
 export const setupSocketIO = (io) => {
+  ioInstance = io;
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;

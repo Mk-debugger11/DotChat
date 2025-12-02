@@ -18,24 +18,22 @@ function GroupListSidebar({ onSelectGroup, selectedGroup, onCreateGroup }) {
   };
 
   return (
-    <div className="flex flex-col h-full border-r border-gray-200 bg-gray-50">
+    <div className="flex flex-col h-full bg-white">
       {/* Header with create button */}
-      <div className="p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-gray-800">Groups</h3>
-          <button
-            onClick={onCreateGroup}
-            className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            + New
-          </button>
-        </div>
+      <div className="px-4 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-800">Groups</h3>
+        <button
+          onClick={onCreateGroup}
+          className="px-3 py-1.5 bg-teal-500 text-white text-xs rounded-full hover:bg-teal-600 shadow-sm transition-colors"
+        >
+          + New
+        </button>
       </div>
 
       {/* Groups list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-slate-50">
         {groups.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">
+          <div className="p-4 text-center text-slate-500 text-sm">
             No groups yet. Create one to get started!
           </div>
         ) : (
@@ -44,27 +42,29 @@ function GroupListSidebar({ onSelectGroup, selectedGroup, onCreateGroup }) {
             return (
               <motion.div
                 key={group.id}
-                whileHover={{ backgroundColor: '#f3f4f6' }}
+                whileHover={{ backgroundColor: '#ecfeff' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onSelectGroup(group)}
-                className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                  selectedGroup?.id === group.id ? 'bg-blue-50' : 'hover:bg-gray-50'
+                className={`px-4 py-3 border-b border-slate-100 cursor-pointer transition-colors ${
+                  selectedGroup?.id === group.id
+                    ? 'bg-teal-100 border-l-4 border-teal-500'
+                    : 'hover:bg-teal-50'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   {/* Group avatar */}
-                  <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-teal-500 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md">
                     {group.name.charAt(0).toUpperCase()}
                   </div>
 
                   {/* Group info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-800 truncate">
+                      <h3 className="text-sm font-medium text-slate-800 truncate">
                         {group.name}
                       </h3>
                       {latestMessage && (
-                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                        <span className="text-xs text-slate-400 flex-shrink-0 ml-2">
                           {new Date(latestMessage.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -73,11 +73,11 @@ function GroupListSidebar({ onSelectGroup, selectedGroup, onCreateGroup }) {
                       )}
                     </div>
                     {latestMessage && (
-                      <p className="text-sm text-gray-600 truncate">
+                      <p className="text-xs text-slate-500 truncate">
                         {latestMessage.content}
                       </p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       {group.members.length} members
                     </p>
                   </div>

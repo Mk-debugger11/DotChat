@@ -5,64 +5,78 @@ import { create } from 'zustand';
 
 export const useChatStore = create((set, get) => ({
   // State
-  chats: [], // List of all chats
-  selectedChat: null, // Currently selected chat
-  messages: {}, // Messages by chatId: { chatId: [messages] }
-  loading: false, // Loading state
+  chats: [], 
+  selectedChat: null, 
+  messages: {}, 
+  loading: false, 
 
-  // Actions
-  // Set chats list
-  setChats: (chats) => {
-    set({ chats });
-  },
+  // --- Chat list ---
+  setChats: (chats) => set({ chats }),
 
-  // Add or update a chat
   addChat: (chat) => {
     const { chats } = get();
-    const existingIndex = chats.findIndex((c) => c.id === chat.id);
+    const idx = chats.findIndex((c) => c.id === chat.id);
 
-    if (existingIndex >= 0) {
-      // Update existing chat
-      const updatedChats = [...chats];
-      updatedChats[existingIndex] = chat;
-      set({ chats: updatedChats });
+    if (idx >= 0) {
+      const updated = [...chats];
+      updated[idx] = chat;
+      set({ chats: updated });
     } else {
-      // Add new chat
       set({ chats: [chat, ...chats] });
     }
   },
 
-  // Select a chat
-  setSelectedChat: (chat) => {
-    set({ selectedChat: chat });
+  setSelectedChat: (chat) => set({ selectedChat: chat }),
+
+  // --- Messages ---
+  setMessages: (chatId, msgs) => {
+    const all = get().messages;
+    set({ messages: { ...all, [chatId]: msgs } });
   },
 
-  // Set messages for a chat
-  setMessages: (chatId, messages) => {
-    const { messages: allMessages } = get();
-    set({
-      messages: {
-        ...allMessages,
-        [chatId]: messages
-      }
-    });
-  },
-
-  // Add a message to a chat
   addMessage: (chatId, message) => {
-    const { messages: allMessages } = get();
-    const chatMessages = allMessages[chatId] || [];
+    const all = get().messages;
+    const list = all[chatId] || [];
     set({
       messages: {
-        ...allMessages,
-        [chatId]: [...chatMessages, message]
+        ...all,
+        [chatId]: [...list, message]
       }
     });
   },
 
-  // Set loading state
-  setLoading: (loading) => {
-    set({ loading });
-  }
-}));
+  // --- Edit message ---
+  editMessage: (messageId, newText) => {
+    const { messages: all } = get();
+    const updated = {};
 
+    Object.entries(all).forEach(([chatId, list]) => {
+      updated[chatId] = list.map((m) =>
+        m.id === messageId
+          ? { ...m, text: newText }
+          : m
+      );
+    });
+
+    set({ messages: updated });
+  },
+
+  // --- Delete (soft delete) ---
+  deleteMessage: (messageId) => {
+    const { messages: all } = get();
+    const updated = {};
+
+    Object.entries(all).forEach(([chatId, list]) => {
+      updated[chatId] = list.map((m) =>
+        m.id === messageId
+          ? { ...m, text: "[deleted]" }  // ← SOFT DELETE FIX
+          : m
+      );
+    });
+
+    set({ messages: updated });
+  },
+
+  // --- Loading ---
+  setLoading: (loading) => set({ loading })
+}));

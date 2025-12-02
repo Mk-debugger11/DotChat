@@ -62,8 +62,8 @@ function GroupMessageInput({ groupId, socket }) {
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4">
-      <form onSubmit={handleSend} className="flex items-end gap-2">
+    <div className="bg-white border-t border-slate-200 px-4 py-3">
+      <form onSubmit={handleSend} className="flex items-end gap-3 max-w-4xl mx-auto">
         {/* Text input */}
         <textarea
           value={content}
@@ -71,17 +71,17 @@ function GroupMessageInput({ groupId, socket }) {
           onKeyPress={handleKeyPress}
           placeholder="Type a message..."
           rows={1}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-full bg-slate-50 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none resize-none text-sm"
           style={{ maxHeight: '120px' }}
         />
 
         {/* Send button */}
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           type="submit"
           disabled={!content.trim() || sending}
-          className="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-teal-500 text-white px-6 py-2 rounded-full text-sm font-medium shadow-md hover:bg-teal-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {sending ? 'Sending...' : 'Send'}
         </motion.button>

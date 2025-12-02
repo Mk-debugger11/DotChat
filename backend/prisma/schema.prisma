@@ -55,6 +55,8 @@ model Message {
   chatId    String   @db.ObjectId
   senderId  String   @db.ObjectId
   createdAt DateTime @default(now())
+  deleted   Boolean  @default(false)
+  deletedAt DateTime?
 
   chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)

@@ -44,17 +44,19 @@ function ChatListItem({ chat, isSelected, onClick, currentUserId }) {
 
   return (
     <motion.div
-      whileHover={{ backgroundColor: '#f3f4f6' }}
+      whileHover={{ backgroundColor: '#ecfeff' }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
-        isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+      className={`px-4 py-3 border-b border-slate-100 cursor-pointer transition-colors ${
+        isSelected
+          ? 'bg-teal-100 border-l-4 border-teal-500'
+          : 'hover:bg-teal-50'
       }`}
     >
       <div className="flex items-center gap-3">
         {/* Avatar */}
         {chat.isGroup ? (
-          <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-teal-500 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-md">
             {chat.name?.charAt(0).toUpperCase() || 'G'}
           </div>
         ) : (
@@ -64,11 +66,11 @@ function ChatListItem({ chat, isSelected, onClick, currentUserId }) {
         {/* Chat info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold text-gray-800 truncate">
+            <h3 className="text-sm font-medium text-slate-800 truncate">
               {getChatName()}
             </h3>
             {latestMessage && (
-              <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+              <span className="text-xs text-slate-400 flex-shrink-0 ml-2">
                 {new Date(latestMessage.createdAt).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit'
@@ -77,8 +79,8 @@ function ChatListItem({ chat, isSelected, onClick, currentUserId }) {
             )}
           </div>
           {latestMessage && (
-            <p className="text-sm text-gray-600 truncate">
-              <span className="font-medium">
+            <p className="text-xs text-slate-500 truncate">
+              <span className="font-medium text-slate-700">
                 {latestMessage.sender?.username}:
               </span>{' '}
               {latestMessage.text}

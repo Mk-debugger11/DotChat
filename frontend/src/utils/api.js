@@ -69,7 +69,15 @@ export const messageAPI = {
   },
 
   searchMessages: (chatId, text) =>
-    apiRequest('GET', `/messages/${chatId}/search?q=${text}`)
+    apiRequest('GET', `/messages/${chatId}/search?q=${text}`),
+
+  // Edit existing message (private or group)
+  editMessage: (messageId, text) =>
+    apiRequest('PUT', `/messages/${messageId}`, { text }),
+
+  // Delete existing message (private or group)
+  deleteMessage: (messageId) =>
+    apiRequest('DELETE', `/messages/${messageId}`)
 };
 
 export const groupAPI = {

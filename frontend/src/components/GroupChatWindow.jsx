@@ -43,12 +43,12 @@ function GroupChatWindow({ groupId, socket }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-100">
+    <div className="flex-1 flex flex-col bg-slate-50">
       {/* Messages list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            <p>No messages yet. Start the conversation!</p>
+          <div className="flex items-center justify-center h-full text-slate-500">
+            <p className="text-sm">No messages yet. Start the conversation!</p>
           </div>
         ) : (
           messages.map((message, index) => {
