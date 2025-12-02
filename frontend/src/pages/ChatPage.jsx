@@ -56,6 +56,9 @@ function ChatPage() {
 
     // Listen for new 1-on-1 messages (existing functionality)
     const handleReceiveMessage = (message) => {
+      // Ignore socket events for your own messages
+      if (message.senderId === user.id) return;
+    
       addMessage(message.chatId, message);
     };
 
