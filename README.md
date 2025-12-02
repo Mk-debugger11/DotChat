@@ -1,4 +1,6 @@
 Deployed Link - https://dot-chat-g2k8kure3-mukuls-projects-5ba58ce6.vercel.app/
+
+
 Project Title: Real-Time Web Chat Application Tech Stack: MERN (MongoDB, Express.js, React.js, Node.js)
 
 Project Overview The Real-Time Web Chat Application aims to provide users with a seamless chatting experience over the web. It allows real-time communication between users through text messages using WebSocket technology (Socket.IO). The app will feature user authentication, private and group chats, online status, message notifications, and a responsive UI.
