@@ -2,164 +2,140 @@
 // 2-column layout with sidebar and chat area
 // Supports both 1-on-1 chats and group chats
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '../stores/authStore';
-import { useChatStore } from '../stores/chatStore';
-import { useGroupStore } from '../stores/groupStore';
-import { useSocketStore } from '../stores/socketStore';
-import { chatAPI, messageAPI, groupAPI } from '../utils/api';
-import Sidebar from '../components/Sidebar';
-import GroupListSidebar from '../components/GroupListSidebar';
-import CreateGroupModal from '../components/CreateGroupModal';
-import ChatHeader from '../components/ChatHeader';
-import MessageList from '../components/MessageList';
-import MessageInput from '../components/MessageInput';
-import GroupChatWindow from '../components/GroupChatWindow';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "../stores/authStore";
+import { useChatStore } from "../stores/chatStore";
+import { useGroupStore } from "../stores/groupStore";
+import { useSocketStore } from "../stores/socketStore";
+import { chatAPI, messageAPI, groupAPI } from "../utils/api";
+import Sidebar from "../components/Sidebar";
+import GroupListSidebar from "../components/GroupListSidebar";
+import CreateGroupModal from "../components/CreateGroupModal";
+import ChatHeader from "../components/ChatHeader";
+import MessageList from "../components/MessageList";
+import MessageInput from "../components/MessageInput";
+import GroupChatWindow from "../components/GroupChatWindow";
 
 function ChatPage() {
   const { user, logout } = useAuthStore();
-  const { selectedChat, setSelectedChat, setChats, setMessages, addMessage } = useChatStore();
+  const { selectedChat, setSelectedChat, setChats, setMessages, addMessage } =
+    useChatStore();
   const {
     selectedGroup,
     setSelectedGroup,
     setGroups,
     addGroup,
     addGroupMessage,
-    setGroupMessages
+    setGroupMessages,
   } = useGroupStore();
   const { socket, connect, disconnect, isConnected } = useSocketStore();
+
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'groups'
+  const [activeTab, setActiveTab] = useState("chats");
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // mobile drawer
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Initialize socket connection and load chats/groups
+  // Init connection + fetch data
   useEffect(() => {
-    // Connect to socket
     connect();
-
-    // Load chats and groups
     loadChats();
     loadGroups();
-
-    // Cleanup on unmount
-    return () => {
-      disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => disconnect();
+    // eslint-disable-next-line
   }, []);
 
-  // Setup socket event listeners for both 1-on-1 and group chats
+  // SOCKET LISTENERS (corrected)
   useEffect(() => {
     if (!socket) return;
 
-    // Listen for new 1-on-1 messages (existing functionality)
     const handleReceiveMessage = (message) => {
-      // Ignore socket events for your own messages
-      if (message.senderId === user.id) return;
-    
+      const senderId =
+        message.senderId || message.sender?.id || message.sender?._id;
+      if (senderId === user.id) return; // ignore our own message
+
       addMessage(message.chatId, message);
     };
 
-    // Listen for new group messages
     const handleGroupMessage = (message) => {
+      const senderId =
+        message.senderId || message.sender?.id || message.sender?._id;
+      if (senderId === user.id) return;
       addGroupMessage(message.groupId, message);
     };
 
-    socket.on('receiveMessage', handleReceiveMessage);
-    socket.on('group-message', handleGroupMessage);
+    socket.on("receiveMessage", handleReceiveMessage);
+    socket.on("group-message", handleGroupMessage);
 
-    // Cleanup
     return () => {
-      socket.off('receiveMessage', handleReceiveMessage);
-      socket.off('group-message', handleGroupMessage);
+      socket.off("receiveMessage", handleReceiveMessage);
+      socket.off("group-message", handleGroupMessage);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, addMessage, addGroupMessage]);
+  }, [socket, addMessage, addGroupMessage, user.id]);
 
-  // Load all chats for the user
+  // LOAD CHATS
   const loadChats = async () => {
     try {
       const chats = await chatAPI.getChats();
       setChats(chats);
     } catch (error) {
-      console.error('Error loading chats:', error);
+      console.error("Error loading chats:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load all groups for the user
+  // LOAD GROUPS
   const loadGroups = async () => {
     try {
       const groups = await groupAPI.getGroups();
       setGroups(groups);
 
-      // Join all group rooms via socket
       if (socket) {
         groups.forEach((group) => {
-          socket.emit('joinGroup', group.id);
+          socket.emit("joinGroup", group.id);
         });
       }
     } catch (error) {
-      console.error('Error loading groups:', error);
+      console.error("Error loading groups:", error);
     }
   };
 
-  // Load messages for selected chat
+  // LOAD PRIVATE MESSAGES (FIXED)
   const loadMessages = async (chatId) => {
     try {
-      const data = await messageAPI.getMessages(chatId);
-      setMessages(chatId, data.messages);
+      const msgs = await messageAPI.getMessages(chatId); // backend returns array
+      setMessages(chatId, msgs);
 
-      // Join chat room via socket
-      if (socket) {
-        socket.emit('joinChat', chatId);
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
+      if (socket) socket.emit("joinChat", chatId);
+    } catch (err) {
+      console.error("Error loading messages:", err);
     }
   };
 
-  // Handle chat selection
+  // SELECT CHAT
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
-    setSelectedGroup(null); // Clear group selection
+    setSelectedGroup(null);
     loadMessages(chat.id);
   };
 
-  // Handle group selection
+  // SELECT GROUP
   const handleSelectGroup = (group) => {
     setSelectedGroup(group);
-    setSelectedChat(null); // Clear chat selection
+    setSelectedChat(null);
     loadGroupMessages(group.id);
   };
 
-  // Load messages for selected group
+  // LOAD GROUP MESSAGES
   const loadGroupMessages = async (groupId) => {
     try {
-      const data = await groupAPI.getGroupMessages(groupId);
-      setGroupMessages(groupId, data.messages);
+      const res = await groupAPI.getGroupMessages(groupId);
+      setGroupMessages(groupId, res.messages);
 
-      // Join group room via socket
-      if (socket) {
-        socket.emit('joinGroup', groupId);
-      }
-    } catch (error) {
-      console.error('Error loading group messages:', error);
-    }
-  };
-
-  // Handle group creation
-  const handleGroupCreated = (group) => {
-    addGroup(group);
-    handleSelectGroup(group);
-    setActiveTab('groups');
-
-    // Join group room via socket
-    if (socket) {
-      socket.emit('joinGroup', group.id);
+      if (socket) socket.emit("joinGroup", groupId);
+    } catch (err) {
+      console.error("Error loading group messages:", err);
     }
   };
 
@@ -167,45 +143,44 @@ function ChatPage() {
 
   return (
     <div className="h-screen flex bg-slate-50">
-      {/* Desktop sidebar with tabs for chats and groups */}
+      {/* Sidebar */}
       <motion.div
         initial={{ x: -260, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.25 }}
         className="hidden md:flex w-80 bg-white border-r border-slate-200 flex-col"
       >
-        {/* Tabs for switching between chats and groups */}
         <div className="flex border-b border-slate-200 bg-slate-50/60">
           <button
             onClick={() => {
-              setActiveTab('chats');
+              setActiveTab("chats");
               setSelectedGroup(null);
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'chats'
-                ? 'text-teal-600 border-b-2 border-teal-500 bg-white'
-                : 'text-slate-600 hover:bg-slate-100'
+              activeTab === "chats"
+                ? "text-teal-600 border-b-2 border-teal-500 bg-white"
+                : "text-slate-600 hover:bg-slate-100"
             }`}
           >
             Chats
           </button>
+
           <button
             onClick={() => {
-              setActiveTab('groups');
+              setActiveTab("groups");
               setSelectedChat(null);
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'groups'
-                ? 'text-teal-600 border-b-2 border-teal-500 bg-white'
-                : 'text-slate-600 hover:bg-slate-100'
+              activeTab === "groups"
+                ? "text-teal-600 border-b-2 border-teal-500 bg-white"
+                : "text-slate-600 hover:bg-slate-100"
             }`}
           >
             Groups
           </button>
         </div>
 
-        {/* Show appropriate sidebar based on active tab */}
-        {activeTab === 'chats' ? (
+        {activeTab === "chats" ? (
           <Sidebar
             onSelectChat={handleSelectChat}
             onLogout={logout}
@@ -221,125 +196,9 @@ function ChatPage() {
         )}
       </motion.div>
 
-      {/* Mobile sidebar drawer */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex md:hidden"
-          >
-            <div
-              className="flex-1 bg-black/40"
-              onClick={closeSidebar}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-              className="w-72 max-w-full h-full bg-white shadow-xl flex flex-col"
-            >
-              {/* Small DotChat badge for mobile */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-                <div className="flex items-center gap-2">
-                  <div className="bg-teal-500 text-white rounded-lg px-2 py-1 text-xs font-semibold shadow">
-                    Dc
-                  </div>
-                  <span className="text-sm font-semibold text-teal-600">
-                    DotChat
-                  </span>
-                </div>
-                <button
-                  onClick={closeSidebar}
-                  className="text-xs text-slate-500 hover:text-slate-700"
-                >
-                  Close
-                </button>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex border-b border-slate-200 bg-slate-50/60">
-                <button
-                  onClick={() => {
-                    setActiveTab('chats');
-                    setSelectedGroup(null);
-                  }}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-                    activeTab === 'chats'
-                      ? 'text-teal-600 border-b-2 border-teal-500 bg-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Chats
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('groups');
-                    setSelectedChat(null);
-                  }}
-                  className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
-                    activeTab === 'groups'
-                      ? 'text-teal-600 border-b-2 border-teal-500 bg-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  Groups
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-hidden">
-                {activeTab === 'chats' ? (
-                  <Sidebar
-                    onSelectChat={(chat) => {
-                      handleSelectChat(chat);
-                      closeSidebar();
-                    }}
-                    onLogout={logout}
-                    currentUser={user}
-                    isConnected={isConnected}
-                  />
-                ) : (
-                  <GroupListSidebar
-                    onSelectGroup={(group) => {
-                      handleSelectGroup(group);
-                      closeSidebar();
-                    }}
-                    selectedGroup={selectedGroup}
-                    onCreateGroup={() => {
-                      setShowCreateGroupModal(true);
-                      closeSidebar();
-                    }}
-                  />
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main chat area */}
+      {/* MAIN CHAT AREA */}
       <div className="flex-1 flex flex-col">
-        {/* Mobile top bar with DotChat badge and menu button */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center gap-2">
-            <div className="bg-teal-500 text-white rounded-lg px-2 py-1 text-xs font-semibold shadow">
-              Dc
-            </div>
-            <span className="text-sm font-semibold text-teal-600">
-              DotChat
-            </span>
-          </div>
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-xs font-medium text-slate-600 border border-slate-200 rounded-full px-3 py-1 hover:bg-slate-50"
-          >
-            Menu
-          </button>
-        </div>
         {selectedChat ? (
-          // 1-on-1 chat view (existing functionality)
           <>
             <ChatHeader chat={selectedChat} />
             <div className="flex-1 overflow-hidden">
@@ -348,9 +207,7 @@ function ChatPage() {
             <MessageInput chatId={selectedChat.id} socket={socket} />
           </>
         ) : selectedGroup ? (
-          // Group chat view
           <>
-            {/* Group header */}
             <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-3 shadow-sm">
               <div className="w-11 h-11 rounded-2xl bg-teal-500 flex items-center justify-center text-white font-semibold shadow-md">
                 {selectedGroup.name.charAt(0).toUpperCase()}
@@ -367,7 +224,6 @@ function ChatPage() {
             <GroupChatWindow groupId={selectedGroup.id} socket={socket} />
           </>
         ) : (
-          // Empty state
           <div className="flex-1 flex items-center justify-center bg-slate-50">
             <motion.div
               initial={{ opacity: 0 }}
@@ -375,23 +231,17 @@ function ChatPage() {
               className="text-center text-slate-500 px-6"
             >
               <h2 className="text-2xl font-semibold mb-2">
-                {activeTab === 'chats' ? 'Welcome to DotChat' : 'DotChat Groups'}
+                {activeTab === "chats" ? "Welcome to DotChat" : "DotChat Groups"}
               </h2>
-              <p className="text-sm">
-                {activeTab === 'chats'
-                  ? 'Select a conversation from the sidebar or start a new one to begin chatting.'
-                  : 'Select a group or create a new one to start a group conversation.'}
-              </p>
             </motion.div>
           </div>
         )}
       </div>
 
-      {/* Create Group Modal */}
       <CreateGroupModal
         isOpen={showCreateGroupModal}
         onClose={() => setShowCreateGroupModal(false)}
-        onGroupCreated={handleGroupCreated}
+        onGroupCreated={addGroup}
         currentUser={user}
       />
     </div>
@@ -399,4 +249,3 @@ function ChatPage() {
 }
 
 export default ChatPage;
-

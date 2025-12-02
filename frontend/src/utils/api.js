@@ -2,14 +2,15 @@ import { useAuthStore } from '../stores/authStore';
 
 const BASE_URL = 'https://dotchat-py90.onrender.com/api';
 
+// -----------------------------
+// Generic API Request Wrapper
+// -----------------------------
 const apiRequest = async (method, endpoint, bodyData) => {
   const { token } = useAuthStore.getState();
 
   const options = {
     method,
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    headers: { 'Content-Type': 'application/json' }
   };
 
   if (token) {
@@ -36,6 +37,9 @@ const apiRequest = async (method, endpoint, bodyData) => {
   return result;
 };
 
+// -----------------------------
+// AUTH
+// -----------------------------
 export const authAPI = {
   register: (username, email, password) =>
     apiRequest('POST', '/auth/register', { username, email, password }),
@@ -44,61 +48,85 @@ export const authAPI = {
     apiRequest('POST', '/auth/login', { username, password })
 };
 
+// -----------------------------
+// USERS
+// -----------------------------
 export const userAPI = {
   searchUsers: (text) => apiRequest('GET', `/users/search?q=${text}`),
-
   getUserById: (id) => apiRequest('GET', `/users/${id}`)
 };
 
+// -----------------------------
+// PRIVATE CHATS
+// -----------------------------
 export const chatAPI = {
   getChats: () => apiRequest('GET', '/chats'),
-
   getChatById: (chatId) => apiRequest('GET', `/chats/${chatId}`),
-
   createChat: (payload) => apiRequest('POST', '/chats', payload)
 };
 
+// -----------------------------
+// PRIVATE MESSAGES (FIXED)
+// -----------------------------
 export const messageAPI = {
   sendMessage: (chatId, text) =>
     apiRequest('POST', '/messages', { chatId, text }),
 
-  getMessages: (chatId, cursor = null, limit = 20) => {
+  // ALWAYS return { messages: [...] }
+  getMessages: async (chatId, cursor = null, limit = 20) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) params.append('cursor', cursor);
-    return apiRequest('GET', `/messages/${chatId}?${params.toString()}`);
+
+    const data = await apiRequest('GET', `/messages/${chatId}?${params}`);
+
+    // backend returns array → normalize
+    if (Array.isArray(data)) {
+      return { messages: data };
+    }
+
+    return data; // if backend sends object
   },
 
   searchMessages: (chatId, text) =>
     apiRequest('GET', `/messages/${chatId}/search?q=${text}`),
 
-  // Edit existing message (private or group)
   editMessage: (messageId, text) =>
     apiRequest('PUT', `/messages/${messageId}`, { text }),
 
-  // Delete existing message (private or group)
   deleteMessage: (messageId) =>
     apiRequest('DELETE', `/messages/${messageId}`)
 };
 
+// -----------------------------
+// GROUPS
+// -----------------------------
 export const groupAPI = {
   createGroup: (name, memberIds) =>
     apiRequest('POST', '/groups/create', { name, memberIds }),
 
   getGroups: () => apiRequest('GET', '/groups'),
 
-  getGroupById: (groupId) =>
-    apiRequest('GET', `/groups/${groupId}`),
+  getGroupById: (groupId) => apiRequest('GET', `/groups/${groupId}`),
 
   sendGroupMessage: (groupId, content) =>
     apiRequest('POST', `/groups/${groupId}/message`, { content }),
 
-  getGroupMessages: (groupId, cursor = null, limit = 20) => {
+  // ALWAYS return { messages: [...] }
+  getGroupMessages: async (groupId, cursor = null, limit = 20) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) params.append('cursor', cursor);
-    return apiRequest(
+
+    const data = await apiRequest(
       'GET',
-      `/groups/${groupId}/messages?${params.toString()}`
+      `/groups/${groupId}/messages?${params}`
     );
+
+    // backend returns array → normalize
+    if (Array.isArray(data)) {
+      return { messages: data };
+    }
+
+    return data;
   }
 };
 

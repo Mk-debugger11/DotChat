@@ -2,26 +2,19 @@ import { verifyToken } from '../utils/jwt.js';
 import prisma from '../config/database.js';
 
 const onlineUsers = new Map();
-
-// Store Socket.IO instance so controllers can emit events
 let ioInstance = null;
 
 export const getIO = () => ioInstance;
 
 export const setupSocketIO = (io) => {
   ioInstance = io;
+
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-
-      if (!token) {
-        return next(new Error('Authentication error: No token'));
-      }
+      if (!token) return next(new Error('Authentication error: No token'));
       const userId = verifyToken(token);
-
-      if (!userId) {
-        return next(new Error('Authentication error: Invalid token'));
-      }
+      if (!userId) return next(new Error('Authentication error: Invalid token'));
 
       socket.userId = userId;
       next();
@@ -32,15 +25,13 @@ export const setupSocketIO = (io) => {
 
   io.on('connection', (socket) => {
     const userId = socket.userId;
-
     console.log(`User ${userId} connected: ${socket.id}`);
 
     onlineUsers.set(userId, socket.id);
-
     socket.join(`user:${userId}`);
-
     io.emit('onlineUsers', Array.from(onlineUsers.keys()));
 
+    // Join chat room
     socket.on('joinChat', async (chatId) => {
       try {
         const chatMember = await prisma.chatMember.findUnique({
@@ -66,51 +57,9 @@ export const setupSocketIO = (io) => {
       console.log(`User ${userId} left chat ${chatId}`);
     });
 
-    socket.on('sendMessage', async (data) => {
-      try {
-        const { chatId, text } = data;
-
-        const chatMember = await prisma.chatMember.findUnique({
-          where: {
-            userId_chatId: {
-              userId,
-              chatId
-            }
-          }
-        });
-
-        if (!chatMember) {
-          return socket.emit('error', { message: 'Not a member of this chat' });
-        }
-
-        const sender = await prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            username: true,
-            avatar: true
-          }
-        });
-
-        const message = {
-          id: `temp-${Date.now()}`, // Temporary ID (will be replaced by DB)
-          text,
-          chatId,
-          senderId: userId,
-          sender,
-          createdAt: new Date()
-        };
-
-        io.to(`chat:${chatId}`).emit('receiveMessage', message);
-      } catch (error) {
-        console.error('Error sending message:', error);
-        socket.emit('error', { message: 'Error sending message' });
-      }
-    });
-
+    // Typing indicator
     socket.on('typing', (data) => {
       const { chatId, isTyping } = data;
-
       socket.to(`chat:${chatId}`).emit('typing', {
         userId,
         chatId,
@@ -118,15 +67,13 @@ export const setupSocketIO = (io) => {
       });
     });
 
-
+    // Join group room
     socket.on('joinGroup', async (groupId) => {
       try {
         const group = await prisma.groupChat.findFirst({
           where: {
             id: groupId,
-            members: {
-              has: userId
-            }
+            members: { has: userId }
           }
         });
 
@@ -144,55 +91,10 @@ export const setupSocketIO = (io) => {
       console.log(`User ${userId} left group ${groupId}`);
     });
 
-    socket.on('sendGroupMessage', async (data) => {
-      try {
-        const { groupId, content } = data;
-
-        const group = await prisma.groupChat.findFirst({
-          where: {
-            id: groupId,
-            members: {
-              has: userId
-            }
-          }
-        });
-
-        if (!group) {
-          return socket.emit('error', { message: 'Not a member of this group' });
-        }
-
-        const sender = await prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            username: true,
-            avatar: true
-          }
-        });
-
-        const message = {
-          id: `temp-${Date.now()}`, 
-          content,
-          groupId,
-          senderId: userId,
-          sender,
-          createdAt: new Date()
-        };
-
-        io.to(`group:${groupId}`).emit('group-message', message);
-      } catch (error) {
-        console.error('Error sending group message:', error);
-        socket.emit('error', { message: 'Error sending group message' });
-      }
-    });
-
     socket.on('disconnect', () => {
       console.log(`User ${userId} disconnected: ${socket.id}`);
-
       onlineUsers.delete(userId);
-
       io.emit('onlineUsers', Array.from(onlineUsers.keys()));
     });
   });
 };
-

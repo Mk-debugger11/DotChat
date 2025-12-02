@@ -1,32 +1,22 @@
-// Message input component
-// Input field with send button and typing indicator
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
-import { useChatStore } from '../stores/chatStore';
 import { messageAPI } from '../utils/api';
 
 function MessageInput({ chatId, socket }) {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [sending, setSending] = useState(false);
-  const { addMessage } = useChatStore();
   const { user } = useAuthStore();
 
-  // Typing indicator timeout
   useEffect(() => {
     let typingTimeout;
 
     if (text.trim() && socket) {
-      // Emit typing start
       socket.emit('typing', { chatId, isTyping: true });
       setIsTyping(true);
 
-      // Clear previous timeout
       if (typingTimeout) clearTimeout(typingTimeout);
-
-      // Stop typing after 2 seconds of no input
       typingTimeout = setTimeout(() => {
         socket.emit('typing', { chatId, isTyping: false });
         setIsTyping(false);
@@ -41,10 +31,8 @@ function MessageInput({ chatId, socket }) {
     };
   }, [text, chatId, socket]);
 
-  // Handle send message
   const handleSend = async (e) => {
     e.preventDefault();
-
     if (!text.trim() || sending) return;
 
     const messageText = text.trim();
@@ -52,36 +40,18 @@ function MessageInput({ chatId, socket }) {
     setSending(true);
 
     try {
-      // Send message via API
-      const message = await messageAPI.sendMessage(chatId, messageText);
-
-      // Add message to store (will also be received via socket)
-      addMessage(chatId, {
-        ...message,
-        sender: {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar
-        }
-      });
-
-      // Emit via socket for real-time delivery
-      if (socket) {
-        socket.emit('sendMessage', {
-          chatId,
-          text: messageText
-        });
-      }
+      // Call API only. Backend will create message and emit 'receiveMessage'.
+      await messageAPI.sendMessage(chatId, messageText);
+      // DO NOT add message locally here; socket will deliver it.
     } catch (error) {
       console.error('Error sending message:', error);
-      // Restore text on error
+      // Restore text if error
       setText(messageText);
     } finally {
       setSending(false);
     }
   };
 
-  // Handle Enter key (send) or Shift+Enter (new line)
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -92,7 +62,6 @@ function MessageInput({ chatId, socket }) {
   return (
     <div className="bg-white border-t border-slate-200 px-4 py-3">
       <form onSubmit={handleSend} className="flex items-end gap-3 max-w-4xl mx-auto">
-        {/* Text input */}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -103,7 +72,6 @@ function MessageInput({ chatId, socket }) {
           style={{ maxHeight: '120px' }}
         />
 
-        {/* Send button */}
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
@@ -119,4 +87,3 @@ function MessageInput({ chatId, socket }) {
 }
 
 export default MessageInput;
-

@@ -1,8 +1,8 @@
-import prisma from "../config/database.js";
-import { getIO } from "../socket/socketHandler.js";
+import prisma from '../config/database.js';
+import { getIO } from '../socket/socketHandler.js';
 
 //
-// SEND MESSAGE (PRIVATE)
+// SEND MESSAGE (PRIVATE) - creates message in DB and EMITS 'receiveMessage'
 //
 export const sendMessage = async (req, res) => {
   try {
@@ -10,7 +10,7 @@ export const sendMessage = async (req, res) => {
     const senderId = req.userId;
 
     if (!chatId || !text) {
-      return res.status(400).json({ error: "Chat ID and text are required" });
+      return res.status(400).json({ error: 'Chat ID and text are required' });
     }
 
     const chatMember = await prisma.chatMember.findUnique({
@@ -20,7 +20,7 @@ export const sendMessage = async (req, res) => {
     });
 
     if (!chatMember) {
-      return res.status(403).json({ error: "You are not a member of this chat" });
+      return res.status(403).json({ error: 'You are not a member of this chat' });
     }
 
     const message = await prisma.message.create({
@@ -30,19 +30,19 @@ export const sendMessage = async (req, res) => {
       }
     });
 
+    // Emit a single event for frontend to consume
     const io = getIO();
-    io.to(`chat:${chatId}`).emit("newMessage", message);
+    io.to(`chat:${chatId}`).emit('receiveMessage', message);
 
     res.status(201).json(message);
   } catch (err) {
-    console.error("Send message error:", err);
-    res.status(500).json({ error: "Server error sending message" });
+    console.error('Send message error:', err);
+    res.status(500).json({ error: 'Server error sending message' });
   }
 };
 
-
 //
-// GET PRIVATE MESSAGES
+// GET PRIVATE MESSAGES (returns array)
 //
 export const getMessages = async (req, res) => {
   try {
@@ -53,47 +53,19 @@ export const getMessages = async (req, res) => {
       include: {
         sender: { select: { id: true, username: true, avatar: true } }
       },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: 'asc' }
     });
 
+    // Return the array directly
     res.json(messages);
   } catch (err) {
-    console.error("Get messages error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error('Get messages error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-
-
 //
-// SEARCH PRIVATE MESSAGES
-//
-export const searchMessages = async (req, res) => {
-  try {
-    const { chatId } = req.params;
-    const { q } = req.query;
-
-    const messages = await prisma.message.findMany({
-      where: {
-        chatId,
-        text: { contains: q, mode: "insensitive" }
-      },
-      include: {
-        sender: { select: { id: true, username: true, avatar: true } }
-      }
-    });
-
-    res.json(messages);
-  } catch (err) {
-    console.error("Search messages error:", err);
-    res.status(500).json({ error: "Server error searching messages" });
-  }
-};
-
-
-
-//
-// EDIT MESSAGE (PRIVATE + GROUP)
+// EDIT MESSAGE (private + group — kept as before)
 //
 export const editMessage = async (req, res) => {
   try {
@@ -101,20 +73,17 @@ export const editMessage = async (req, res) => {
     const { text } = req.body;
     const userId = req.userId;
 
-    if (!text) return res.status(400).json({ error: "New text is required" });
+    if (!text) return res.status(400).json({ error: 'New text is required' });
 
     let updatedMessage = null;
     let room = null;
     let isGroup = false;
 
-    // ---------- PRIVATE MESSAGE ----------
-    const privateMsg = await prisma.message.findUnique({
-      where: { id: messageId }
-    });
+    const privateMsg = await prisma.message.findUnique({ where: { id: messageId } });
 
     if (privateMsg) {
       if (privateMsg.senderId !== userId)
-        return res.status(403).json({ error: "You can edit only your own messages" });
+        return res.status(403).json({ error: 'You can edit only your own messages' });
 
       updatedMessage = await prisma.message.update({
         where: { id: messageId },
@@ -128,17 +97,11 @@ export const editMessage = async (req, res) => {
       isGroup = false;
     }
 
-    // ---------- GROUP MESSAGE ----------
     if (!updatedMessage) {
-      const groupMsg = await prisma.groupMessage.findUnique({
-        where: { id: messageId }
-      });
+      const groupMsg = await prisma.groupMessage.findUnique({ where: { id: messageId } });
 
-      if (!groupMsg)
-        return res.status(404).json({ error: "Message not found" });
-
-      if (groupMsg.senderId !== userId)
-        return res.status(403).json({ error: "You can edit only your own messages" });
+      if (!groupMsg) return res.status(404).json({ error: 'Message not found' });
+      if (groupMsg.senderId !== userId) return res.status(403).json({ error: 'You can edit only your own messages' });
 
       const updated = await prisma.groupMessage.update({
         where: { id: messageId },
@@ -156,19 +119,17 @@ export const editMessage = async (req, res) => {
     }
 
     const io = getIO();
-    io.to(room).emit("messageUpdated", { ...updatedMessage, isGroup });
+    io.to(room).emit('messageUpdated', { ...updatedMessage, isGroup });
 
     res.json({ success: true, data: updatedMessage });
   } catch (err) {
-    console.error("Edit message error:", err);
-    res.status(500).json({ error: "Server error editing message" });
+    console.error('Edit message error:', err);
+    res.status(500).json({ error: 'Server error editing message' });
   }
 };
 
-
-
 //
-// DELETE MESSAGE (PRIVATE + GROUP)
+// DELETE MESSAGE (private: soft replace text; group: hard delete)
 //
 export const deleteMessage = async (req, res) => {
   try {
@@ -179,18 +140,15 @@ export const deleteMessage = async (req, res) => {
     let room = null;
     let isGroup = false;
 
-    // ---------- PRIVATE ----------
-    const privateMsg = await prisma.message.findUnique({
-      where: { id: messageId }
-    });
+    const privateMsg = await prisma.message.findUnique({ where: { id: messageId } });
 
     if (privateMsg) {
       if (privateMsg.senderId !== userId)
-        return res.status(403).json({ error: "You can delete only your own messages" });
+        return res.status(403).json({ error: 'You can delete only your own messages' });
 
       await prisma.message.update({
         where: { id: messageId },
-        data: { text: "[deleted]" }
+        data: { text: '[deleted]' }
       });
 
       deletedId = messageId;
@@ -198,21 +156,13 @@ export const deleteMessage = async (req, res) => {
       isGroup = false;
     }
 
-    // ---------- GROUP ----------
     if (!deletedId) {
-      const groupMsg = await prisma.groupMessage.findUnique({
-        where: { id: messageId }
-      });
+      const groupMsg = await prisma.groupMessage.findUnique({ where: { id: messageId } });
 
-      if (!groupMsg)
-        return res.status(404).json({ error: "Message not found" });
+      if (!groupMsg) return res.status(404).json({ error: 'Message not found' });
+      if (groupMsg.senderId !== userId) return res.status(403).json({ error: 'You can delete only your own messages' });
 
-      if (groupMsg.senderId !== userId)
-        return res.status(403).json({ error: "You can delete only your own messages" });
-
-      await prisma.groupMessage.delete({
-        where: { id: messageId }
-      });
+      await prisma.groupMessage.delete({ where: { id: messageId } });
 
       deletedId = messageId;
       room = `group:${groupMsg.groupId}`;
@@ -220,11 +170,11 @@ export const deleteMessage = async (req, res) => {
     }
 
     const io = getIO();
-    io.to(room).emit("messageDeleted", { messageId: deletedId, isGroup });
+    io.to(room).emit('messageDeleted', { messageId: deletedId, isGroup });
 
     res.json({ success: true, data: { messageId: deletedId, isGroup } });
   } catch (err) {
-    console.error("Delete message error:", err);
-    res.status(500).json({ error: "Server error deleting message" });
+    console.error('Delete message error:', err);
+    res.status(500).json({ error: 'Server error deleting message' });
   }
 };
