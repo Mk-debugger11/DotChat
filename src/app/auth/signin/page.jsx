@@ -3,39 +3,35 @@ import React, { useState } from 'react'
 import { apiRequest } from '@/app/utils/api';
 import Spinner from '../../components/spinner'
 import Link from 'next/link';
+import { useAuthStore } from '@/app/store/authStore';
 import { useRouter } from 'next/navigation';
-const method = 'POST'
-const endPoint = '/auth/signup'
+
 export default function SignIn() {
+  const router = useRouter()
+  const setToken = useAuthStore((state)=>state.setToken)
+  const method = 'POST'
+  const endPoint = '/auth/login'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
-  const [success,setSuccess] = useState(false)
-  const router = useRouter()
-
-  async function sendRequest(s) { 
+  
+  async function sendRequest(s) {
     s.preventDefault()
-    setSuccess(false)
-    setLoading(true)
     setError('')
+    setLoading(true)
     let bodyData = {
-      "name": name,
       "email": email,
       "password": password
     }
     try {
       const data = await apiRequest(method, endPoint, bodyData)
-      setSuccess(true)
       setLoading(false)
       setEmail('')
       setPassword('')
-      setName('')
-      setTimeout(()=>{
-        router.push('/auth/signin')
-      },1500)
+      setToken(data.token)
+      router.push('/')
     } catch (error) {
       setError(error.message)
       setLoading(false)
@@ -43,12 +39,11 @@ export default function SignIn() {
   }
   return (
     <div className="w-full max-w-md">
-
       <h2 className="text-3xl font-semibold text-gray-900">
-        Create your account
+        Sign in to your account
       </h2>
       <p className="mt-2 text-sm text-gray-500">
-        Sign up to start smarter conversations with dotchat.ai.
+        Welcome back! Please enter your details.
       </p>
 
       <button
@@ -75,34 +70,13 @@ export default function SignIn() {
       <form className="space-y-4" onSubmit={sendRequest}>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Full Name
-          </label>
-          <input
-            onChange={(e) => { setName(e.target.value) }}
-            value={name}
-            type="text"
-            placeholder="Mukul Kumar"
-            className="
-              mt-1 w-full
-              border border-gray-300
-              rounded-lg
-              px-4 py-3
-              text-sm
-              focus:outline-none
-              focus:ring-2 focus:ring-[#1a0033]
-              focus:border-transparent
-            "
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
             Email
           </label>
           <input
-            onChange={(e) => { setEmail(e.target.value) }}
-            value={email}
             type="email"
+            value={email}
             placeholder="you@example.com"
+            onChange={(e) => { setEmail(e.target.value) }}
             className="
               mt-1 w-full
               border border-gray-300
@@ -149,10 +123,10 @@ export default function SignIn() {
                 hover:text-gray-700
                 focus:outline-none"
             >
-             {showPass 
-             ? (<img src="/hide.png" className='w-5'/>)
-            :(<img src='/view.png' className='w-5'/>)
-             }  
+              {showPass
+                ? (<img src="/hide.png" className='w-5' />)
+                : (<img src='/view.png' className='w-5' />)
+              }
             </button>
           </div>
         </div>
@@ -162,19 +136,6 @@ export default function SignIn() {
             Forgot password?
           </button>
         </div>
-        {success && (
-          <p
-            className="
-              mt-3
-              text-sm
-              text-green-600
-              bg-green-50
-              border border-green-200
-              rounded-md
-              px-3 py-2">
-            User Successfully registered. Please Sign in
-          </p>
-        )}
         {error && (
           <p
             className="
@@ -207,14 +168,14 @@ export default function SignIn() {
           "
         >
           {loading ?
-            (<div className='flex justify-center gap-3 items-center'><Spinner /><span> Signing Up </span></div>) : 'Sign Up'}
+            (<div className='flex justify-center gap-3 items-center'><Spinner /><span> Signing In </span></div>) : 'Sign In'}
         </button>
       </form>
 
       <p className="mt-6 text-sm text-gray-500 text-center">
-        Already have a account?{" "}
+        Don’t have an account?{" "}
         <span className="text-[#1a0033] font-medium cursor-pointer hover:underline">
-          <Link href='/auth/signin'>Sign in</Link>
+          <Link href='/auth/signup'>Sign Up</Link>
         </span>
       </p>
 
